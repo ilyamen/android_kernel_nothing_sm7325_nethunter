@@ -98,6 +98,9 @@
 #include "wlan_hdd_oemdata.h"
 #endif
 #include "wlan_hdd_he.h"
+#ifdef FEATURE_FRAME_INJECTION_SUPPORT
+#include "wlan_hdd_frame_inject.h"
+#endif
 
 #include <net/neighbour.h>
 #include <net/netevent.h>
@@ -1566,8 +1569,13 @@ struct hdd_adapter {
 #endif
 	bool delete_in_progress;
 	qdf_atomic_t net_dev_hold_ref_count[NET_DEV_HOLD_ID_MAX];
+
 #ifdef WLAN_FEATURE_PKT_CAPTURE
 	struct hdd_adapter *mon_adapter;
+#endif
+
+#ifdef FEATURE_FRAME_INJECTION_SUPPORT
+	struct hdd_injection_ctx *injection_ctx;
 #endif
 };
 
