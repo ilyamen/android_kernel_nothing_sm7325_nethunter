@@ -165,10 +165,3 @@ int hdd_disable_monitor_mode(struct net_device *dev)
 
 	return ret;
 }
-
-int hdd_disable_monitor_mode(void)
-{
-	void *soc = cds_get_context(QDF_MODULE_ID_SOC);
-
-	return cdp_reset_monitor_mode(soc, OL_TXRX_PDEV_ID, false);
-}
