@@ -28,6 +28,7 @@
 #include "osif_sync.h"
 #include <wlan_hdd_tx_rx.h>
 #include <wlan_hdd_softap_tx_rx.h>
+#include <net/ieee80211_radiotap.h>
 #include <wlan_hdd_napi.h>
 #include <linux/netdevice.h>
 #include <linux/skbuff.h>
