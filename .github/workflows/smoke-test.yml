@@ -1,0 +1,82 @@
+# THIS FILE IS A CANDIDATE FOR KERNEL-REPO, NOT THIS BUILD-REPO.
+#
+# Path in kernel-repo: .github/workflows/smoke-test.yml
+# Repo:               https://github.com/ilyamen/android_kernel_nothing_sm7325_nethunter
+# Purpose:            Run on every PR / push to verify the kernel still
+#                     compiles after a LOS upstream rebase.
+#                     Defconfig + Image build only — no modules, no AnyKernel.
+#                     ~5-7 min per run vs ~30 min for full release build.
+
+name: Kernel Smoke Test
+
+on:
+  push:
+    branches: [nethunter-23.2, nethunter-23.2-stable]
+  pull_request:
+    branches: [nethunter-23.2]
+  workflow_dispatch:
+
+jobs:
+  build-image:
+    name: defconfig + Image
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Free disk
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android /opt/hostedtoolcache
+          df -h
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Install build deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            bc bison build-essential flex git libssl-dev libelf-dev \
+            libncurses-dev wget xz-utils python3
+
+      - name: Cache AOSP Clang
+        uses: actions/cache@v4
+        with:
+          path: /tmp/aosp-clang/clang-r547379
+          key: aosp-clang-r547379-v1
+
+      - name: Download AOSP Clang (if not cached)
+        run: |
+          mkdir -p /tmp/aosp-clang
+          if [ ! -d /tmp/aosp-clang/clang-r547379/bin ]; then
+            cd /tmp/aosp-clang
+            wget -q "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/main-kernel/clang-r547379.tar.gz" -O clang.tar.gz
+            mkdir -p clang-r547379
+            tar -xf clang.tar.gz -C clang-r547379
+            rm clang.tar.gz
+          fi
+          /tmp/aosp-clang/clang-r547379/bin/clang --version | head -1
+
+      - name: Configure (vendor defconfig)
+        run: |
+          export PATH=/tmp/aosp-clang/clang-r547379/bin:$PATH
+          export ARCH=arm64 SUBARCH=arm64 LLVM=1 LLVM_IAS=1 CC=clang \
+                 CROSS_COMPILE=aarch64-linux-gnu- \
+                 CROSS_COMPILE_ARM32=arm-linux-gnueabi-
+          mkdir -p out
+          make O=out vendor/lahaina-qgki_defconfig
+
+      - name: Build Image (smoke test — no modules)
+        run: |
+          export PATH=/tmp/aosp-clang/clang-r547379/bin:$PATH
+          export ARCH=arm64 SUBARCH=arm64 LLVM=1 LLVM_IAS=1 CC=clang \
+                 CROSS_COMPILE=aarch64-linux-gnu- \
+                 CROSS_COMPILE_ARM32=arm-linux-gnueabi-
+          make O=out -j$(nproc) Image
+          ls -lh out/arch/arm64/boot/Image
+
+      - name: Result
+        run: |
+          echo "::notice::Kernel compiled successfully — smoke test passed"
+          echo "Kernel version: $(cat out/include/config/kernel.release)"
+          echo "Image size:     $(stat -c%s out/arch/arm64/boot/Image) bytes"
