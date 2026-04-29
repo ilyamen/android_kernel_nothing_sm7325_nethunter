@@ -13967,6 +13967,8 @@ static void dp_soc_cfg_init(struct dp_soc *soc)
 			}
 		}
 		soc->wlan_cfg_ctx->rxdma1_enable = 0;
+		if (cfg_get(soc->ctrl_psoc, CFG_DP_FULL_MON_MODE))
+			dp_config_full_mon_mode((struct cdp_soc_t *)soc, 1);
 		break;
 	case TARGET_TYPE_QCA8074:
 		wlan_cfg_set_mon_delayed_replenish_entries(soc->wlan_cfg_ctx,
